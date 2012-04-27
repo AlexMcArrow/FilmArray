@@ -13,7 +13,7 @@ new FilmArrayFX();
 
 class FilmArrayStudio {
 
-    const FAS_version = '0.1';
+    const FAS_version = '0.2';
 
     public static $Scenario;
     public static $Movie;

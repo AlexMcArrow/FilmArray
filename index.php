@@ -18,11 +18,11 @@ FilmArrayFX::Title ('1', '0', 3);
 FilmArrayFX::Title ('111', '0', 1);
 FilmArrayFX::Title ('11111', '0', 1);
 FilmArrayFX::Title ('1111111', '0', 1);
+FilmArrayFX::Title ('111111111', '0', 1);
+FilmArrayFX::Title ('11111111111', '0', 1);
 FilmArrayFX::FillScreen ('1', 2);
 FilmArrayFX::Title ('The End');
 FilmArrayFX::Title ('Alex McArrow', FALSE, 1);
-FilmArrayFX::Title ('NTMan', FALSE, 1);
-FilmArrayFX::Title ('Denis', FALSE, 1);
 FilmArrayFX::Title ('2012');
 
 FilmArrayStudio::MakeMovie ();
