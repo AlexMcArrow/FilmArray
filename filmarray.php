@@ -13,7 +13,7 @@ new FilmArrayFX();
 
 class FilmArrayStudio {
 
-    const FAS_version = '0.2';
+    const FAS_version = '0.2.1';
 
     public static $Scenario;
     public static $Movie;
@@ -55,18 +55,18 @@ class FilmArrayStudio {
         self::$Movie = array ();
     }
 
-    public static function MakeMovie () {
+    public static function MakeMovie ($fps = 24) {
         self::$Movie = array ();
         foreach (self::$Scenario['frames'] as $key => $value) {
-            self::$Movie = array_merge (self::$Movie, FilmArrayFX::DrawFrames ($value));
+            self::$Movie = array_merge (self::$Movie, FilmArrayFX::DrawFrames ($value, $fps));
         }
     }
 
     public static function SaveMovie ($filename) {
         self::MakeMovie ();
-        $BODY = '<pre style="font-size:2em;">';
+        $BODY = '<pre style="font-size:1.5em;">';
         $BODY .= print_r (self::$Movie, TRUE);
-        $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/>';
+        $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
         file_put_contents ($filename . '.html', $BODY);
     }
 
@@ -74,29 +74,28 @@ class FilmArrayStudio {
 
 class FilmArrayFX {
 
-    const FAFX_version = '0.3';
+    const FAFX_version = '0.3.1';
 
+    private static $HeightOffset;
     private static $Width;
     private static $Height;
-    private static $FPS;
     private static $NullBit;
     private static $Templates;
 
     function __construct () {
-        self::$Width = 32;
-        self::$Height = 10;
-        self::$FPS = 24;
+        self::$Width = 43;
+        self::$Height = 15;
+        self::$HeightOffset = 10;
         self::$NullBit = ' ';
         self::$Templates = array ();
-        self::_gen_null_screen ();
-    }
-
-    public static function Titles ($titles, $speed) {
-        /// scrolling titles
     }
 
     public static function Title ($titles, $fillbit = FALSE, $length = 2) {
         self::_set_title ($titles, $fillbit, $length);
+    }
+
+    public static function Titles ($titles, $speed) {
+        /// scrolling titles
     }
 
     public static function NullScreen ($frames) {
@@ -122,16 +121,16 @@ class FilmArrayFX {
         FilmArrayStudio::_set ('frames', $Frames);
     }
 
-    public static function DrawFrames ($rules) {
+    public static function DrawFrames ($rules, $fps) {
         $OUT = array ();
         switch ($rules['type']) {
             case 'null':
-                for ($len = 0; $len < ($rules['data']['length'] * self::$FPS); $len++) {
-                    $OUT[] = self::$Templates['null'];
+                for ($len = 0; $len < ($rules['data']['length'] * $fps); $len++) {
+                    $OUT[] = self::_gen_fill_screen (self::$NullBit);
                 }
                 break;
             case 'fill':
-                for ($len = 0; $len < ($rules['data']['length'] * self::$FPS); $len++) {
+                for ($len = 0; $len < ($rules['data']['length'] * $fps); $len++) {
                     $OUT[] = self::_gen_fill_screen ($rules['data']['bit']);
                 }
                 break;
@@ -139,12 +138,12 @@ class FilmArrayFX {
                 if ($rules['data']['bit'] !== FALSE) {
                     $frame = self::_gen_fill_screen ($rules['data']['bit']);
                 } else {
-                    $frame = self::$Templates['null'];
+                    $frame = self::_gen_fill_screen (self::$NullBit);
                 }
                 for ($index = 0; $index < mb_strlen ($rules['data']['text'], 'UTF-8'); $index++) {
-                    $frame[$rules['data']['top']][$rules['data']['left'] + $index] = $rules['data']['text'][$index];
+                    $frame[$rules['data']['top'] + self::$HeightOffset][$rules['data']['left'] + $index] = $rules['data']['text'][$index];
                 }
-                for ($len = 0; $len < ($rules['data']['length'] * self::$FPS); $len++) {
+                for ($len = self::$HeightOffset; $len < (($rules['data']['length'] * $fps) + self::$HeightOffset); $len++) {
                     $OUT[] = $frame;
                 }
                 break;
@@ -156,26 +155,27 @@ class FilmArrayFX {
         return $OUT;
     }
 
-    private static function _gen_null_screen () {
-        self::$Templates['null'] = self::_gen_fill_screen (self::$NullBit);
-    }
-
     private static function _gen_fill_screen ($bit) {
-        $FILL = array ();
-        $line = '';
-        for ($y = 0; $y <= self::$Width; $y++) {
-            $line .= $bit;
+        if (!isset (self::$Templates[$bit])) {
+            $FILL = array ();
+            $line = '';
+            $z = self::$HeightOffset;
+            for ($y = 0; $y <= self::$Width; $y++) {
+                $line .= $bit;
+            }
+            for ($x = 0; $x < self::$Height; $x++) {
+                $FILL[$z] = $line;
+                $z++;
+            }
+            self::$Templates[$bit] = $FILL;
         }
-        for ($x = 0; $x < self::$Height; $x++) {
-            $FILL[] = $line;
-        }
-        return $FILL;
+        return self::$Templates[$bit];
     }
 
     private static function _set_title ($text, $bit, $length) {
         $TextWidth = mb_strlen ($text, 'UTF-8');
-        $left = round ((self::$Width / 2) - ($TextWidth / 2));
-        $top = round (self::$Height / 2);
+        $left = floor ((self::$Width / 2) - ($TextWidth / 2));
+        $top = floor (self::$Height / 2);
         $Frames = FilmArrayStudio::_get ('frames');
         $Frames[] = array (
             'type' => 'centext',
