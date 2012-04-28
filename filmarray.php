@@ -60,6 +60,7 @@ class FilmArrayStudio {
         foreach (self::$Scenario['frames'] as $key => $value) {
             self::$Movie = array_merge (self::$Movie, FilmArrayFX::DrawFrames ($value, $fps));
         }
+        return print_r (self::$Movie, TRUE);
     }
 
     public static function SaveMovie ($filename) {
