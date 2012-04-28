@@ -25,6 +25,7 @@ FilmArrayFX::Title ('111111111111111', '0', 1);
 FilmArrayFX::FillScreen ('1', 2);
 FilmArrayFX::Title ('The End');
 FilmArrayFX::NullScreen (0.2);
+//FilmArrayFX::Titles (array ('Alex McArrow', '2012'), 3);
 FilmArrayFX::Title ('Alex McArrow', FALSE, 1);
 FilmArrayFX::Title ('2012');
 
@@ -33,3 +34,5 @@ FilmArrayStudio::MakeMovie (32);
 FilmArrayStudio::SaveProject ('bitborn');
 
 FilmArrayStudio::SaveMovie ('bitborn');
+
+FilmArrayStudio::ShowLog ();

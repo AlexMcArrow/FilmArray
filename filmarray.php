@@ -13,12 +13,14 @@ new FilmArrayFX();
 
 class FilmArrayStudio {
 
-    const FAS_version = '0.2.1';
+    const FAS_version = '0.2.2';
 
     public static $Scenario;
     public static $Movie;
+    private static $Log;
 
     function __construct () {
+        self::$Log[] = 'FilmArrayStudio :: init';
         return TRUE;
     }
 
@@ -37,6 +39,10 @@ class FilmArrayStudio {
         return FALSE;
     }
 
+    public static function ShowLog () {
+        echo implode ("<br/>", self::$Log);
+    }
+
     public static function NewFilm ($name, $author) {
         self::$Scenario = array (
             'name' => $name,
@@ -44,15 +50,18 @@ class FilmArrayStudio {
             'frames' => array ()
         );
         self::$Movie = array ();
+        self::$Log[] = 'FilmArrayStudio :: new film';
     }
 
     public static function SaveProject ($filename) {
         file_put_contents ($filename . '.fa', json_encode (self::$Scenario));
+        self::$Log[] = 'FilmArrayStudio :: project save as (' . $filename . '.fa)';
     }
 
     public static function LoadProject ($filename) {
         self::$Scenario = json_decode (file_get_contents ($filename . '.fa'), TRUE);
         self::$Movie = array ();
+        self::$Log[] = 'FilmArrayStudio :: project load from (' . $filename . '.fa)';
     }
 
     public static function MakeMovie ($fps = 24) {
@@ -60,6 +69,7 @@ class FilmArrayStudio {
         foreach (self::$Scenario['frames'] as $key => $value) {
             self::$Movie = array_merge (self::$Movie, FilmArrayFX::DrawFrames ($value, $fps));
         }
+        self::$Log[] = 'FilmArrayStudio :: movie compiled';
         return print_r (self::$Movie, TRUE);
     }
 
@@ -69,13 +79,14 @@ class FilmArrayStudio {
         $BODY .= print_r (self::$Movie, TRUE);
         $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
         file_put_contents ($filename . '.html', $BODY);
+        self::$Log[] = 'FilmArrayStudio :: movie save as (' . $filename . '.html)';
     }
 
 }
 
 class FilmArrayFX {
 
-    const FAFX_version = '0.3.1';
+    const FAFX_version = '0.3.2';
 
     private static $HeightOffset;
     private static $Width;
@@ -95,8 +106,17 @@ class FilmArrayFX {
         self::_set_title ($titles, $fillbit, $length);
     }
 
-    public static function Titles ($titles, $speed) {
-        /// scrolling titles
+    public static function Titles ($titles, $frames) {
+        /// frames - the number of seconds for which the text should go all the way from the bottom to the top
+        $Frames = FilmArrayStudio::_get ('frames');
+        $Frames[] = array (
+            'type' => 'titles',
+            'data' => array (
+                'length' => $frames,
+                'titles' => $titles
+            )
+        );
+        FilmArrayStudio::_set ('frames', $Frames);
     }
 
     public static function NullScreen ($frames) {
@@ -149,11 +169,18 @@ class FilmArrayFX {
                 }
                 break;
 
+            case 'titles':
+                break;
+
             default:
                 $OUT[] = self::$Templates['null'];
                 break;
         }
         return $OUT;
+    }
+
+    private static function _gen_titles_screens () {
+        
     }
 
     private static function _gen_fill_screen ($bit) {
