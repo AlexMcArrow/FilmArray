@@ -66,7 +66,7 @@ class FilmArrayStudio {
 
     public static function MakeMovie ($fps = 24) {
         self::$Movie = array ();
-        foreach (self::$Scenario['frames'] as $key => $value) {
+        foreach (self::$Scenario['frames'] as $value) {
             self::$Movie = array_merge (self::$Movie, FilmArrayFX::DrawFrames ($value, $fps));
         }
         self::$Log[] = 'FilmArrayStudio :: movie compiled';
@@ -86,7 +86,7 @@ class FilmArrayStudio {
 
 class FilmArrayFX {
 
-    const FAFX_version = '0.3.2';
+    const FAFX_version = '0.3.3';
 
     private static $HeightOffset;
     private static $Width;
@@ -170,6 +170,38 @@ class FilmArrayFX {
                 break;
 
             case 'titles':
+                $data = $rules['data']['titles'];
+                krsort ($data);
+                $posforframe = 1;
+                $width = count ($data) * 2;
+                $pos = -3;
+                $titlesin = TRUE;
+                $step = 0;
+                while ($titlesin) {
+                    $frame = self::_gen_fill_screen (self::$NullBit);
+                    $linepos = self::$Height;
+                    foreach ($data as $value) {
+                        $left = floor ((self::$Width / 2) - (mb_strlen ($value) / 2));
+                        $realpos = (self::$HeightOffset + self::$Height) - (($posforframe * $pos) - $linepos);
+                        if (($realpos < (self::$HeightOffset + self::$Height)) && ($realpos > (self::$HeightOffset - 1))) {
+                            for ($index = 0; $index < mb_strlen ($value, 'UTF-8'); $index++) {
+                                $frame[$realpos][$left + $index] = $value[$index];
+                            }
+                        }
+                        $linepos = $linepos - 2;
+                    }
+                    $step++;
+                    if ($step >= $rules['data']['length']) {
+                        $pos++;
+                        $step = 0;
+                    }
+                    if (($realpos - self::$HeightOffset + ($width * 2)) < $width) {
+                        $titlesin = FALSE;
+                    } else {
+                        $OUT[] = $frame;
+                    }
+                }
+
                 break;
 
             default:
@@ -180,7 +212,7 @@ class FilmArrayFX {
     }
 
     private static function _gen_titles_screens () {
-        
+
     }
 
     private static function _gen_fill_screen ($bit) {
