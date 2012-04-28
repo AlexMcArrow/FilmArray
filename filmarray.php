@@ -74,12 +74,15 @@ class FilmArrayStudio {
     }
 
     public static function SaveMovie ($filename) {
-        self::MakeMovie ();
-        $BODY = '<pre style="font-size:1.5em;"><h1>' . self::$Scenario['name'] . '</h1>by ' . self::$Scenario['author'] . '<hr/>';
-        $BODY .= print_r (self::$Movie, TRUE);
-        $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
-        file_put_contents ($filename . '.html', $BODY);
-        self::$Log[] = 'FilmArrayStudio :: movie save as (' . $filename . '.html)';
+        if (count (self::$Movie) > 0) {
+            $BODY = '<pre style="font-size:1.5em;"><h1>' . self::$Scenario['name'] . '</h1>by ' . self::$Scenario['author'] . '<hr/>';
+            $BODY .= print_r (self::$Movie, TRUE);
+            $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
+            file_put_contents ($filename . '.html', $BODY);
+            self::$Log[] = 'FilmArrayStudio :: movie save as (' . $filename . '.html)';
+        } else {
+            self::$Log[] = 'FilmArrayStudio :: movie not compiled!!!';
+        }
     }
 
 }
@@ -100,6 +103,19 @@ class FilmArrayFX {
         self::$HeightOffset = 10;
         self::$NullBit = ' ';
         self::$Templates = array ();
+    }
+
+    public static function CountDown ($start = 9, $frames, $ps = FALSE) {
+        $Frames = FilmArrayStudio::_get ('frames');
+        $Frames[] = array (
+            'type' => 'countdown',
+            'data' => array (
+                'length' => $frames,
+                'start' => $start,
+                'ps' => $ps
+            )
+        );
+        FilmArrayStudio::_set ('frames', $Frames);
     }
 
     public static function Title ($titles, $fillbit = FALSE, $length = 2) {
@@ -145,16 +161,19 @@ class FilmArrayFX {
     public static function DrawFrames ($rules, $fps) {
         $OUT = array ();
         switch ($rules['type']) {
+
             case 'null':
                 for ($len = 0; $len < ($rules['data']['length'] * $fps); $len++) {
                     $OUT[] = self::_gen_fill_screen (self::$NullBit);
                 }
                 break;
+
             case 'fill':
                 for ($len = 0; $len < ($rules['data']['length'] * $fps); $len++) {
                     $OUT[] = self::_gen_fill_screen ($rules['data']['bit']);
                 }
                 break;
+
             case 'centext':
                 if ($rules['data']['bit'] !== FALSE) {
                     $frame = self::_gen_fill_screen ($rules['data']['bit']);
@@ -203,6 +222,55 @@ class FilmArrayFX {
                 }
 
                 break;
+            case 'countdown':
+                $INFOMATRIX = array (
+                    9 => array ('31', '17', '17', '31', '1', '1', '31'),
+                    8 => array ('31', '17', '17', '31', '17', '17', '31'),
+                    7 => array ('31', '1', '1', '1', '1', '1', '1'),
+                    6 => array ('31', '16', '16', '31', '17', '17', '31'),
+                    5 => array ('31', '16', '16', '31', '1', '1', '31'),
+                    4 => array ('17', '17', '17', '31', '1', '1', '1'),
+                    3 => array ('31', '1', '1', '31', '1', '1', '31'),
+                    2 => array ('31', '1', '1', '31', '16', '16', '31'),
+                    1 => array ('1', '1', '1', '1', '1', '1', '1'),
+                    0 => array ('31', '17', '17', '17', '17', '17', '31')
+                );
+                $left = floor ((self::$Width / 2) - 2);
+                foreach ($INFOMATRIX as $key => $value) {
+                    $frame = self::_gen_fill_screen (self::$NullBit);
+                    $top = floor ((self::$Height / 2) - 3);
+                    foreach ($value as $code) {
+                        $line = self::prezero (decbin ((int) $code), 5);
+                        $line = str_ireplace ('0', self::$NullBit, $line);
+                        $line = str_ireplace ('1', $key, $line);
+                        for ($index = 0; $index < mb_strlen ($line, 'UTF-8'); $index++) {
+                            $frame[$top + self::$HeightOffset][$left + $index] = $line[$index];
+                        }
+                        $top++;
+                    }
+                    for ($x = 0; $x < ($rules['data']['length'] * $fps); $x++) {
+                        $OUT[] = $frame;
+                    }
+                }
+                if ($rules['data']['ps'] === TRUE) {
+                    $left = floor ((self::$Width / 2) - 15);
+                    $top = floor ((self::$Height / 2) - 5);
+                    $noise = array ('2147483647', '1543503901', '1132462305', '1081083649', '1074673665', '1073856513', '1074673665', '1081083649', '1132462305', '1543503901', '2147483647');
+                    $frame = self::_gen_fill_screen (self::$NullBit);
+                    $OUT[] = $frame;
+                    foreach ($noise as $code) {
+                        $line = self::prezero (decbin ((int) $code), 31);
+                        $line = str_ireplace ('0', self::$NullBit, $line);
+                        $line = str_ireplace ('1', '*', $line);
+                        for ($index = 0; $index < mb_strlen ($line, 'UTF-8'); $index++) {
+                            $frame[$top + self::$HeightOffset][$left + $index] = $line[$index];
+                        }
+                        $top++;
+                    }
+                    $OUT[] = $frame;
+                }
+
+                break;
 
             default:
                 $OUT[] = self::$Templates['null'];
@@ -211,8 +279,9 @@ class FilmArrayFX {
         return $OUT;
     }
 
-    private static function _gen_titles_screens () {
-
+    private static function prezero ($n, $max) {
+        $ret = str_pad ($n, $max, "0", STR_PAD_LEFT);
+        return $ret;
     }
 
     private static function _gen_fill_screen ($bit) {
