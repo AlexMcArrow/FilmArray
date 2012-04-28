@@ -27,8 +27,7 @@ FilmArrayFX::Title ('1111111111111', '0', 1);
 FilmArrayFX::Title ('111111111111111', '0', 1);
 FilmArrayFX::FillScreen ('1', 2);
 FilmArrayFX::Title ('The End');
-FilmArrayFX::NullScreen (0.2);
-FilmArrayFX::Titles (array ('Alex McArrow', '2012', '-------------------', 'FilmArrayStudio'), 5);
+FilmArrayFX::Titles (array ('Alex McArrow', '2012', '-------------------', 'FilmArrayStudio'), 6);
 FilmArrayFX::NullScreen (1);
 
 
