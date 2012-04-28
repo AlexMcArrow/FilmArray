@@ -65,7 +65,7 @@ class FilmArrayStudio {
 
     public static function SaveMovie ($filename) {
         self::MakeMovie ();
-        $BODY = '<pre style="font-size:1.5em;">';
+        $BODY = '<pre style="font-size:1.5em;"><h1>' . self::$Scenario['name'] . '</h1>by ' . self::$Scenario['author'] . '<hr/>';
         $BODY .= print_r (self::$Movie, TRUE);
         $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
         file_put_contents ($filename . '.html', $BODY);
