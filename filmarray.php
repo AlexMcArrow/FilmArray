@@ -237,19 +237,21 @@ class FilmArrayFX {
                 );
                 $left = floor ((self::$Width / 2) - 2);
                 foreach ($INFOMATRIX as $key => $value) {
-                    $frame = self::_gen_fill_screen (self::$NullBit);
-                    $top = floor ((self::$Height / 2) - 3);
-                    foreach ($value as $code) {
-                        $line = self::prezero (decbin ((int) $code), 5);
-                        $line = str_ireplace ('0', self::$NullBit, $line);
-                        $line = str_ireplace ('1', $key, $line);
-                        for ($index = 0; $index < mb_strlen ($line, 'UTF-8'); $index++) {
-                            $frame[$top + self::$HeightOffset][$left + $index] = $line[$index];
+                    if ($key <= $rules['data']['start']) {
+                        $frame = self::_gen_fill_screen (self::$NullBit);
+                        $top = floor ((self::$Height / 2) - 3);
+                        foreach ($value as $code) {
+                            $line = self::prezero (decbin ((int) $code), 5);
+                            $line = str_ireplace ('0', self::$NullBit, $line);
+                            $line = str_ireplace ('1', $key, $line);
+                            for ($index = 0; $index < mb_strlen ($line, 'UTF-8'); $index++) {
+                                $frame[$top + self::$HeightOffset][$left + $index] = $line[$index];
+                            }
+                            $top++;
                         }
-                        $top++;
-                    }
-                    for ($x = 0; $x < ($rules['data']['length'] * $fps); $x++) {
-                        $OUT[] = $frame;
+                        for ($x = 0; $x < ($rules['data']['length'] * $fps); $x++) {
+                            $OUT[] = $frame;
+                        }
                     }
                 }
                 if ($rules['data']['ps'] === TRUE) {
