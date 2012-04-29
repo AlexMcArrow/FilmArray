@@ -13,7 +13,7 @@ new FilmArrayFX();
 
 class FilmArrayStudio {
 
-    const FAS_version = '0.2.2';
+    const FAS_version = '0.2.3';
 
     public static $Scenario;
     public static $Movie;
@@ -65,11 +65,12 @@ class FilmArrayStudio {
     }
 
     public static function MakeMovie ($fps = 24) {
+        $elepsed = microtime (TRUE);
         self::$Movie = array ();
         foreach (self::$Scenario['frames'] as $value) {
             self::$Movie = array_merge (self::$Movie, FilmArrayFX::DrawFrames ($value, $fps));
         }
-        self::$Log[] = 'FilmArrayStudio :: movie compiled';
+        self::$Log[] = 'FilmArrayStudio :: movie compiled (' . count (self::$Movie) . '@' . (number_format ((microtime (TRUE) - $elepsed), 6, '.', '')) . ')';
         return print_r (self::$Movie, TRUE);
     }
 
@@ -79,9 +80,23 @@ class FilmArrayStudio {
             $BODY .= print_r (self::$Movie, TRUE);
             $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
             file_put_contents ($filename . '.html', $BODY);
-            self::$Log[] = 'FilmArrayStudio :: movie save as (' . $filename . '.html)';
+            self::$Log[] = 'FilmArrayStudio :: movie save as (' . $filename . '.html) (' . mb_strlen ($BODY) . ' bytes)';
         } else {
             self::$Log[] = 'FilmArrayStudio :: movie not compiled!!!';
+        }
+    }
+
+    public static function SaveMovieBorder ($filename, $scale = 1.5) {
+        if (count (self::$Movie) > 0) {
+            $BODY = '<pre style="font-size:' . (float) $scale . 'em;"><h1>' . self::$Scenario['name'] . '</h1>by ' . self::$Scenario['author'] . '<hr/>';
+            foreach (self::$Movie as $frame => $picture) {
+                $BODY .= FilmArrayFX::StockOut ($frame, $picture);
+            }
+            $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
+            file_put_contents ($filename . '.b.html', $BODY);
+            self::$Log[] = 'FilmArrayStudio :: bordered movie save as (' . $filename . '.b.html) (' . mb_strlen ($BODY) . ' bytes)';
+        } else {
+            self::$Log[] = 'FilmArrayStudio :: bordered movie not compiled!!!';
         }
     }
 
@@ -89,23 +104,28 @@ class FilmArrayStudio {
 
 class FilmArrayFX {
 
-    const FAFX_version = '0.3.3';
+    const FAFX_version = '0.3.4';
+    const FAFX_align_center = 0;
+    const FAFX_align_left = 1;
+    const FAFX_align_right = 2;
 
     private static $HeightOffset;
     private static $Width;
     private static $Height;
     private static $NullBit;
     private static $Templates;
+    private static $BorderCounter;
 
     function __construct () {
-        self::$Width = 43;
-        self::$Height = 15;
+        self::$Width = 47;
+        self::$Height = 17;
         self::$HeightOffset = 10;
         self::$NullBit = ' ';
         self::$Templates = array ();
+        self::$BorderCounter = 0;
     }
 
-    public static function CountDown ($start = 9, $frames, $ps = FALSE) {
+    public static function CountDown ($start = 9, $frames = 0.5, $ps = FALSE) {
         $Frames = FilmArrayStudio::_get ('frames');
         $Frames[] = array (
             'type' => 'countdown',
@@ -122,14 +142,15 @@ class FilmArrayFX {
         self::_set_title ($titles, $fillbit, $length);
     }
 
-    public static function Titles ($titles, $frames) {
+    public static function Titles ($titles, $frames, $align = self::FAFX_align_center) {
         /// frames - the number of seconds for which the text should go all the way from the bottom to the top
         $Frames = FilmArrayStudio::_get ('frames');
         $Frames[] = array (
             'type' => 'titles',
             'data' => array (
                 'length' => $frames,
-                'titles' => $titles
+                'titles' => $titles,
+                'align' => $align
             )
         );
         FilmArrayStudio::_set ('frames', $Frames);
@@ -180,9 +201,7 @@ class FilmArrayFX {
                 } else {
                     $frame = self::_gen_fill_screen (self::$NullBit);
                 }
-                for ($index = 0; $index < mb_strlen ($rules['data']['text'], 'UTF-8'); $index++) {
-                    $frame[$rules['data']['top'] + self::$HeightOffset][$rules['data']['left'] + $index] = $rules['data']['text'][$index];
-                }
+                $frame = self::PlaceInFrame ($frame, $rules['data']['text'], ($rules['data']['top'] + self::$HeightOffset), ($rules['data']['left'] + $index));
                 for ($len = self::$HeightOffset; $len < (($rules['data']['length'] * $fps) + self::$HeightOffset); $len++) {
                     $OUT[] = $frame;
                 }
@@ -193,21 +212,53 @@ class FilmArrayFX {
                 krsort ($data);
                 $posforframe = 1;
                 $width = count ($data) * 2;
-                $pos = -3;
+                $pos = count ($data);
                 $titlesin = TRUE;
                 $step = 0;
                 while ($titlesin) {
                     $frame = self::_gen_fill_screen (self::$NullBit);
                     $linepos = self::$Height;
                     foreach ($data as $value) {
-                        $left = floor ((self::$Width / 2) - (mb_strlen ($value) / 2));
-                        $realpos = (self::$HeightOffset + self::$Height) - (($posforframe * $pos) - $linepos);
-                        if (($realpos < (self::$HeightOffset + self::$Height)) && ($realpos > (self::$HeightOffset - 1))) {
-                            for ($index = 0; $index < mb_strlen ($value, 'UTF-8'); $index++) {
-                                $frame[$realpos][$left + $index] = $value[$index];
+                        $values = self::TextSplit ($value, self::$Width - 2);
+                        krsort ($values);
+                        if (count ($values) > 1) {
+                            foreach ($values as $val) {
+                                switch ($rules['data']['align']) {
+                                    case self::FAFX_align_center:
+                                        $left = floor ((self::$Width / 2) - (mb_strlen ($val) / 2));
+                                        break;
+                                    case self::FAFX_align_left:
+                                        $left = 1;
+                                        break;
+                                    case self::FAFX_align_right:
+                                        $left = self::$Width - mb_strlen ($val);
+                                        break;
+                                }
+                                $realpos = (self::$HeightOffset + self::$Height) - (($posforframe * $pos) - $linepos);
+                                if (($realpos < (self::$HeightOffset + self::$Height)) && ($realpos > (self::$HeightOffset - 1))) {
+                                    $frame = self::PlaceInFrame ($frame, $val, $realpos, $left);
+                                }
+                                $linepos = $linepos - 1;
                             }
+                            $linepos = $linepos - 1;
+                        } else {
+                            switch ($rules['data']['align']) {
+                                case self::FAFX_align_center:
+                                    $left = floor ((self::$Width / 2) - (mb_strlen ($value) / 2));
+                                    break;
+                                case self::FAFX_align_left:
+                                    $left = 1;
+                                    break;
+                                case self::FAFX_align_right:
+                                    $left = self::$Width - mb_strlen ($value);
+                                    break;
+                            }
+                            $realpos = (self::$HeightOffset + self::$Height) - (($posforframe * $pos) - $linepos);
+                            if (($realpos < (self::$HeightOffset + self::$Height)) && ($realpos > (self::$HeightOffset - 1))) {
+                                $frame = self::PlaceInFrame ($frame, $value, $realpos, $left);
+                            }
+                            $linepos = $linepos - 2;
                         }
-                        $linepos = $linepos - 2;
                     }
                     $step++;
                     if ($step >= $rules['data']['length']) {
@@ -222,6 +273,7 @@ class FilmArrayFX {
                 }
 
                 break;
+
             case 'countdown':
                 $INFOMATRIX = array (
                     9 => array ('31', '17', '17', '31', '1', '1', '31'),
@@ -239,24 +291,22 @@ class FilmArrayFX {
                 foreach ($INFOMATRIX as $key => $value) {
                     if ($key <= $rules['data']['start']) {
                         $frame = self::_gen_fill_screen (self::$NullBit);
-                        $top = floor ((self::$Height / 2) - 3);
+                        $top = floor ((self::$Height / 2) - 3 + self::$HeightOffset);
                         foreach ($value as $code) {
                             $line = self::prezero (decbin ((int) $code), 5);
                             $line = str_ireplace ('0', self::$NullBit, $line);
                             $line = str_ireplace ('1', $key, $line);
-                            for ($index = 0; $index < mb_strlen ($line, 'UTF-8'); $index++) {
-                                $frame[$top + self::$HeightOffset][$left + $index] = $line[$index];
-                            }
+                            $frame = self::PlaceInFrame ($frame, $line, $top, $left);
                             $top++;
                         }
-                        for ($x = 0; $x < ($rules['data']['length'] * $fps); $x++) {
+                        for ($x = 0; $x < ($rules['data']['length'] * ($fps / 2)); $x++) {
                             $OUT[] = $frame;
                         }
                     }
                 }
                 if ($rules['data']['ps'] === TRUE) {
                     $left = floor ((self::$Width / 2) - 15);
-                    $top = floor ((self::$Height / 2) - 5);
+                    $top = floor ((self::$Height / 2) - 5 + self::$HeightOffset);
                     $noise = array ('2147483647', '1543503901', '1132462305', '1081083649', '1074673665', '1073856513', '1074673665', '1081083649', '1132462305', '1543503901', '2147483647');
                     $frame = self::_gen_fill_screen (self::$NullBit);
                     $OUT[] = $frame;
@@ -264,9 +314,7 @@ class FilmArrayFX {
                         $line = self::prezero (decbin ((int) $code), 31);
                         $line = str_ireplace ('0', self::$NullBit, $line);
                         $line = str_ireplace ('1', '*', $line);
-                        for ($index = 0; $index < mb_strlen ($line, 'UTF-8'); $index++) {
-                            $frame[$top + self::$HeightOffset][$left + $index] = $line[$index];
-                        }
+                        $frame = self::PlaceInFrame ($frame, $line, $top, $left);
                         $top++;
                     }
                     $OUT[] = $frame;
@@ -281,9 +329,67 @@ class FilmArrayFX {
         return $OUT;
     }
 
+    public static function StockOut ($frame, $picture) {
+        $side = '|   |';
+        $side2 = '| O |';
+        if (self::$BorderCounter == 0) {
+            $OUTFRAME = $side2 . str_pad ('- ' . $frame . ' ', (self::$Width + 1), '-') . $side2 . "\r\n";
+        } else {
+            $OUTFRAME = $side . str_pad ('- ' . $frame . ' ', (self::$Width + 1), '-') . $side . "\r\n";
+        }
+        self::$BorderCounter++;
+        if (self::$BorderCounter > 3) {
+            self::$BorderCounter = 0;
+        }
+        foreach ($picture as $line) {
+            if (self::$BorderCounter == 0) {
+                $OUTFRAME .= $side2 . $line . $side2 . "\r\n";
+            } else {
+                $OUTFRAME .= $side . $line . $side . "\r\n";
+            }
+            self::$BorderCounter++;
+            if (self::$BorderCounter > 3) {
+                self::$BorderCounter = 0;
+            }
+        }
+        if (self::$BorderCounter == 0) {
+            $OUTFRAME .= $side2 . str_pad (' FAS+FAFX -', (self::$Width + 1), '-', STR_PAD_LEFT) . $side2 . "\r\n";
+        } else {
+            $OUTFRAME .= $side . str_pad (' FAS+FAFX -', (self::$Width + 1), '-', STR_PAD_LEFT) . $side . "\r\n";
+        }
+        self::$BorderCounter++;
+        if (self::$BorderCounter > 3) {
+            self::$BorderCounter = 0;
+        }
+        return $OUTFRAME;
+    }
+
+    private static function PlaceInFrame ($frame, $text, $top, $left) {
+        for ($index = 0; $index < mb_strlen ($text, 'UTF-8'); $index++) {
+            $frame[$top][$left + $index] = $text[$index];
+        }
+        return $frame;
+    }
+
     private static function prezero ($n, $max) {
         $ret = str_pad ($n, $max, "0", STR_PAD_LEFT);
         return $ret;
+    }
+
+    private static function TextSplit ($string, $your_desired_width) {
+        $OUT = array ();
+        $WORDS = explode (' ', $string);
+        $line = '';
+        foreach ($WORDS as $value) {
+            if (mb_strlen ($line . $value) > $your_desired_width) {
+                $OUT[] = $line;
+                $line = $value;
+            } else {
+                $line .= ' ' . $value;
+            }
+        }
+        $OUT[] = $line;
+        return $OUT;
     }
 
     private static function _gen_fill_screen ($bit) {
