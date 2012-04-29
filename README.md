@@ -3,11 +3,11 @@ FilmArray Project
 
 About
 -------
-This set of scripts for generating "ArrayFilm".
+This set of scripts to create a "ArrayFilm".
 
-"ArrayFilm" - a technology for creating an animation with the function "print_r".
+"ArrayFilm" - the technology to create animation using time-lapse scanning, as in film
 
-To view the animation, you need to perform scroll down the screen at a constant rate.
+To view the animation, you need to scroll down the screen at a constant rate.
 
 --------------
 
