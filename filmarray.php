@@ -73,9 +73,9 @@ class FilmArrayStudio {
         return print_r (self::$Movie, TRUE);
     }
 
-    public static function SaveMovie ($filename) {
+    public static function SaveMovie ($filename, $scale = 1.5) {
         if (count (self::$Movie) > 0) {
-            $BODY = '<pre style="font-size:1.5em;"><h1>' . self::$Scenario['name'] . '</h1>by ' . self::$Scenario['author'] . '<hr/>';
+            $BODY = '<pre style="font-size:' . (float) $scale . 'em;"><h1>' . self::$Scenario['name'] . '</h1>by ' . self::$Scenario['author'] . '<hr/>';
             $BODY .= print_r (self::$Movie, TRUE);
             $BODY .= '<hr/>FilmArrayStudio ' . self::FAS_version . '<br/>FilmArrayFX ' . FilmArrayFX::FAFX_version . '<hr/></pre>';
             file_put_contents ($filename . '.html', $BODY);
